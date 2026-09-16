@@ -1,0 +1,731 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #03060a;
+  --color-paper: #e8eef2;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+:root {
+  --bg: #03060a;
+  --fg: #e8eef2;
+
+  --muted: rgba(232, 238, 242, 0.56);
+  --faint: rgba(232, 238, 242, 0.32);
+  --ghost: rgba(232, 238, 242, 0.14);
+  --line: rgba(255, 255, 255, 0.09);
+
+  /* Written every frame by the scroll engine from the live field
+     palette. Everything tinted in the interface reads from this one
+     property, so the chrome is lit by the same ramp as the particles
+     instead of sitting on top of them in a fixed colour. */
+  --accent: rgb(143 240 216);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Scroll distance for one beat. */
+  --section-h: 185vh;
+  --pad: clamp(1.1rem, 3vw, 2.6rem);
+  --pad-top: clamp(5.5rem, 11vh, 8rem);
+}
+
+* {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+html {
+  background: var(--bg);
+  /* Lenis drives scrolling; native smooth would fight it. */
+  scroll-behavior: auto;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+body[data-cursor="on"],
+body[data-cursor="on"] * {
+  cursor: none;
+}
+
+::selection {
+  background: rgba(120, 200, 220, 0.28);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: inherit;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 400;
+  padding: 0.5rem 0.9rem;
+  background: var(--fg);
+  color: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform 0.25s var(--ease-out);
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* ---------------------------------------------------------------- *
+ * Canvas
+ *
+ * 100svh, never 100vh — a mobile URL bar resizing vh mid-scroll makes
+ * the pinned panel jump. The !important is needed because R3F writes
+ * inline width/height from its own resize observer.
+ * ---------------------------------------------------------------- */
+
+.canvas-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+.webgl {
+  position: fixed;
+  inset: 0;
+  width: 100vw !important;
+  height: 100svh !important;
+  display: block;
+}
+
+main {
+  position: relative;
+  z-index: 10;
+}
+
+/* ---------------------------------------------------------------- *
+ * Type primitives
+ * ---------------------------------------------------------------- */
+
+.mono,
+.motto,
+.sec-label,
+.stat,
+.depth-label,
+.nav-item {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.display {
+  margin: 0;
+  font-weight: 600;
+  font-size: clamp(2.5rem, 7vw, 7.2rem);
+  line-height: 0.86;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+}
+
+/* Each line is clipped by its own mask. Safe here — and nowhere near a
+   flowed paragraph — because every break in these headlines is authored
+   in the content file, so a line can never reflow out from under it. */
+.display .line {
+  display: block;
+  overflow: hidden;
+  /* A hair of vertical room, or descenders and diacritics get shaved. */
+  padding-bottom: 0.04em;
+  margin-bottom: -0.04em;
+}
+
+.display .line-in {
+  display: block;
+  will-change: transform;
+}
+
+/* ---------------------------------------------------------------- *
+ * Fixed chrome
+ * ---------------------------------------------------------------- */
+
+.chrome {
+  position: fixed;
+  z-index: 120;
+  display: grid;
+  gap: 0.45rem;
+  pointer-events: none;
+}
+
+.chrome > * {
+  pointer-events: auto;
+}
+
+.chrome-tl {
+  top: var(--pad);
+  left: var(--pad);
+  justify-items: start;
+}
+
+.chrome-tr {
+  top: var(--pad);
+  right: var(--pad);
+  justify-items: end;
+  gap: 0.28rem;
+}
+
+.wordmark {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
+  color: var(--fg);
+}
+
+.motto {
+  color: var(--faint);
+}
+
+.nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  color: var(--faint);
+  transition: color 0.35s var(--ease-out);
+}
+
+.nav-item svg {
+  width: 8px;
+  height: 8px;
+  opacity: 0.6;
+  transition: transform 0.35s var(--ease-out);
+}
+
+.nav-item:hover,
+.nav-item[data-active="true"] {
+  color: var(--fg);
+}
+
+.nav-item[data-active="true"] {
+  color: var(--accent);
+}
+
+.nav-item:hover svg {
+  transform: translate(1px, -1px);
+}
+
+/* Depth doubles as the progress readout — the one number on the page
+   that is both thematic and functional. */
+.depth {
+  display: flex;
+  align-items: baseline;
+  gap: 0.2em;
+  margin-top: 0.9rem;
+}
+
+.depth b {
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+  transition: color 0.4s linear;
+}
+
+.depth i {
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--faint);
+}
+
+.depth-label {
+  color: var(--faint);
+}
+
+/* Progress as a hairline across the very top of the viewport. It has
+   the whole width to itself, so it never collides with a corner. */
+.rail {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  z-index: 130;
+  pointer-events: none;
+}
+
+.rail-track {
+  position: absolute;
+  inset: 0;
+  background: var(--line);
+}
+
+.rail-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  transform: scaleX(0);
+  background: var(--accent);
+  opacity: 0.85;
+}
+
+/* ---------------------------------------------------------------- *
+ * Stage / pin
+ * ---------------------------------------------------------------- */
+
+.stage-section {
+  height: var(--section-h);
+  position: relative;
+}
+
+.stage-pin {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  /* Only the bits that need it opt back in. */
+  pointer-events: none;
+  padding: var(--pad-top) var(--pad) clamp(1.6rem, 4vh, 2.8rem);
+}
+
+.panel {
+  height: 100%;
+  display: grid;
+  will-change: opacity, transform;
+}
+
+.panel a,
+.panel button,
+.panel [data-interactive] {
+  pointer-events: auto;
+}
+
+/* ---------------------------------------------------------------- *
+ * Section layouts
+ * ---------------------------------------------------------------- */
+
+.head {
+  display: grid;
+  gap: 1.1rem;
+  align-content: end;
+  justify-items: start;
+}
+
+.stat {
+  color: var(--accent);
+  transition: color 0.4s linear;
+}
+
+.note {
+  display: grid;
+  gap: 0.85rem;
+  align-content: end;
+  justify-items: start;
+  max-width: 26rem;
+}
+
+.note p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+  letter-spacing: -0.002em;
+}
+
+.sec-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.sec-label b {
+  font-weight: 400;
+  color: var(--fg);
+}
+
+.sec-label i {
+  width: 20px;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.7;
+  transition: background 0.4s linear;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg);
+  text-decoration: none;
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid var(--line);
+  transition: border-color 0.35s var(--ease-out), color 0.35s var(--ease-out);
+}
+
+.link svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.35s var(--ease-out);
+}
+
+.link:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.link:hover svg {
+  transform: translateX(3px);
+}
+
+/* Headline bottom-left, note bottom-right. */
+.layout-corner {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr auto auto;
+  gap: 2rem;
+}
+
+.layout-corner .head {
+  grid-row: 2;
+}
+
+.layout-corner .note {
+  grid-row: 3;
+}
+
+/* Headline left of centre, note right of centre. */
+.layout-left {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr auto auto;
+  gap: 2rem;
+}
+
+.layout-left .head {
+  grid-row: 2;
+}
+
+.layout-left .note {
+  grid-row: 3;
+}
+
+.layout-centre {
+  grid-template-rows: 1fr auto auto;
+  gap: 2rem;
+  justify-items: center;
+}
+
+.layout-centre .head,
+.layout-centre .note {
+  justify-items: center;
+  text-align: center;
+}
+
+.layout-centre .head {
+  grid-row: 2;
+}
+
+.layout-centre .note {
+  grid-row: 3;
+  max-width: 34rem;
+}
+
+@media (min-width: 900px) {
+  .layout-corner,
+  .layout-left {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+    grid-template-rows: 1fr auto;
+    column-gap: clamp(2rem, 6vw, 6rem);
+  }
+
+  .layout-corner .head,
+  .layout-corner .note {
+    grid-row: 2;
+  }
+  .layout-corner .head {
+    grid-column: 1;
+  }
+  .layout-corner .note {
+    grid-column: 2;
+  }
+
+  /* The only structural difference between the two: `left` centres the
+     whole row vertically instead of dropping it to the floor. */
+  .layout-left {
+    grid-template-rows: 1fr auto 1fr;
+    align-items: center;
+  }
+  .layout-left .head,
+  .layout-left .note {
+    grid-row: 2;
+    align-content: center;
+  }
+  .layout-left .head {
+    grid-column: 1;
+  }
+  .layout-left .note {
+    grid-column: 2;
+  }
+
+  .layout-centre {
+    grid-template-rows: 1fr auto auto 1fr;
+    align-content: center;
+  }
+  .layout-centre .head {
+    grid-row: 2;
+  }
+  .layout-centre .note {
+    grid-row: 3;
+  }
+}
+
+/* ---------------------------------------------------------------- *
+ * Closer
+ * ---------------------------------------------------------------- */
+
+.layout-closer {
+  place-content: center;
+  justify-items: center;
+}
+
+.closer-stack {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 3.5rem;
+  width: min(100%, 42rem);
+  text-align: center;
+}
+
+/* Stacked in one grid cell so the lines cross-fade in place rather
+   than pushing each other around. */
+.closer-line {
+  grid-area: 1 / 1;
+  margin: 0;
+  font-size: clamp(1rem, 1.6vw, 1.35rem);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  color: var(--fg);
+  opacity: 0;
+  will-change: opacity, transform;
+}
+
+/* ---------------------------------------------------------------- *
+ * Preloader
+ * ---------------------------------------------------------------- */
+
+.preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg);
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 1rem;
+  padding: var(--pad);
+  will-change: clip-path;
+}
+
+.pre-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pre-mid {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 0.25rem;
+}
+
+.pre-depth {
+  font-size: clamp(3rem, 12vw, 9rem);
+  font-weight: 300;
+  letter-spacing: -0.06em;
+  line-height: 0.85;
+  color: var(--fg);
+}
+
+.pre-unit {
+  font-family: var(--font-mono);
+  font-size: clamp(0.7rem, 1.6vw, 1rem);
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+
+.pre-bar {
+  position: relative;
+  height: 1px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.pre-bar i {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  transform: scaleX(0);
+  background: var(--accent);
+}
+
+.mono {
+  color: var(--faint);
+}
+
+/* ---------------------------------------------------------------- *
+ * Cursor
+ * ---------------------------------------------------------------- */
+
+.cursor,
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 300;
+  pointer-events: none;
+  border-radius: 999px;
+  will-change: transform;
+}
+
+.cursor {
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  background: var(--fg);
+}
+
+.cursor-ring {
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border: 1px solid rgba(232, 238, 242, 0.3);
+  transition:
+    width 0.35s var(--ease-out),
+    height 0.35s var(--ease-out),
+    margin 0.35s var(--ease-out),
+    border-color 0.35s var(--ease-out);
+}
+
+.cursor-ring[data-hot="true"] {
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- *
+ * Footer
+ * ---------------------------------------------------------------- */
+
+.footer {
+  position: relative;
+  z-index: 10;
+  background: linear-gradient(180deg, rgba(3, 6, 10, 0.5), var(--bg) 38%);
+  padding: clamp(5rem, 14vh, 9rem) var(--pad) clamp(1.4rem, 4vh, 2.2rem);
+}
+
+.footer-top {
+  display: grid;
+  gap: clamp(2rem, 5vw, 4rem);
+  grid-template-columns: 1fr;
+  padding-bottom: clamp(2.5rem, 7vh, 4.5rem);
+  border-bottom: 1px solid var(--line);
+}
+
+@media (min-width: 780px) {
+  .footer-top {
+    grid-template-columns: 1.5fr repeat(3, minmax(0, 1fr));
+  }
+}
+
+.footer-brand {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+  max-width: 28rem;
+}
+
+.footer-brand p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.footer-col {
+  display: grid;
+  gap: 0.55rem;
+  align-content: start;
+}
+
+.footer-col a {
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  width: fit-content;
+  transition: color 0.3s var(--ease-out);
+}
+
+.footer-col a:hover {
+  color: var(--accent);
+}
+
+.footer-bottom {
+  padding-top: 1.2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.footer-bottom button:hover {
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- *
+ * Reduced motion
+ *
+ * Not "less movement" — the animated affordances are off entirely and
+ * the scene draws one static frame.
+ * ---------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+  }
+  .closer-line {
+    opacity: 1;
+  }
+}
