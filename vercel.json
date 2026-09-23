@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "frame-ancestors https://www.oneshotsites.com https://oneshotsites.com http://localhost:3000" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/",
+      "missing": [
+        { "type": "header", "key": "sec-fetch-dest", "value": "iframe" },
+        { "type": "query", "key": "key", "value": "a67MzS1ni1WOeV-t4iFxfAvW" }
+      ],
+      "destination": "https://www.oneshotsites.com/sites/abyssal",
+      "permanent": false
+    }
+  ]
+}
